@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Deutsch">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Deutsch lernen</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --bg2: #f5f5f4;
+      --bg3: #eeece8;
+      --text: #1c1c1c;
+      --text2: #6b6b6b;
+      --text3: #a0a0a0;
+      --border: rgba(0,0,0,0.1);
+      --border2: rgba(0,0,0,0.18);
+      --radius: 10px;
+      --radius-lg: 16px;
+      --green: #1D9E75; --green-bg: #E1F5EE; --green-text: #085041; --green-dark: #0F6E56;
+      --amber: #BA7517; --amber-bg: #FAEEDA; --amber-text: #633806; --amber-dark: #854F0B;
+      --red: #E24B4A; --red-bg: #FCEBEB; --red-text: #791F1F; --red-dark: #A32D2D;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a1a; --bg2: #242424; --bg3: #2e2e2e;
+        --text: #f0f0f0; --text2: #a0a0a0; --text3: #666;
+        --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.18);
+        --green-bg: #0a2e22; --amber-bg: #2e1e05; --red-bg: #2e0f0f;
+      }
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+
+    .app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; padding-top: var(--safe-top); }
+
+    /* Nav */
+    .nav { display: flex; align-items: center; padding: 12px 16px 0; gap: 6px; border-bottom: 0.5px solid var(--border); padding-bottom: 10px; flex-shrink: 0; }
+    .app-name { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; margin-right: auto; }
+    .tab { background: transparent; border: none; padding: 7px 14px; border-radius: 99px; font-size: 14px; cursor: pointer; color: var(--text2); font-family: inherit; transition: all 0.15s; font-weight: 500; }
+    .tab.on { background: var(--bg2); color: var(--text); border: 0.5px solid var(--border2); }
+
+    /* Scrollable content */
+    .view { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 16px calc(16px + var(--safe-bottom)); }
+
+    /* Stats */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+    .sc { background: var(--bg2); border-radius: var(--radius); padding: 10px 10px; }
+    .sc-label { font-size: 10px; color: var(--text3); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .sc-val { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+
+    /* Card */
+    .card-shell { border: 0.5px solid var(--border); border-radius: var(--radius-lg); background: var(--bg); padding: 28px 20px; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 12px; text-align: center; transition: border-color 0.2s, background 0.2s; }
+    .card-shell.correct { border-color: var(--green); background: var(--green-bg); }
+    .card-shell.typo { border-color: var(--amber); background: var(--amber-bg); }
+    .card-shell.wrong { border-color: var(--red); background: var(--red-bg); }
+    .card-shell.skipped { border-color: var(--border2); }
+
+    .prompt-lang { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; }
+    .prompt-word { font-size: 28px; font-weight: 600; letter-spacing: -0.03em; margin-bottom: 6px; line-height: 1.2; }
+    .prompt-hint { font-size: 13px; color: var(--text2); font-style: italic; }
+    .answer-divider { width: 32px; height: 0.5px; background: var(--border2); margin: 14px auto; }
+    .ans-lang { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
+    .ans-word { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+    .feedback-msg { font-size: 14px; font-weight: 600; margin-top: 10px; }
+    .feedback-msg.ok { color: var(--green-text); }
+    .feedback-msg.warn { color: var(--amber-text); }
+    .feedback-msg.err { color: var(--red-text); }
+    .feedback-msg.skip { color: var(--text2); font-weight: 400; }
+    .your-ans { font-size: 12px; color: var(--text3); margin-top: 4px; }
+
+    /* Progress */
+    .prog-wrap { background: var(--bg3); border-radius: 99px; height: 3px; margin-bottom: 10px; overflow: hidden; }
+    .prog-bar { height: 100%; border-radius: 99px; transition: width 0.35s; }
+    .prog-bar.neutral { background: var(--text3); }
+    .prog-bar.good { background: var(--green); }
+    .prog-bar.bad { background: var(--red); }
+    .queue-meta { font-size: 12px; color: var(--text3); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Input */
+    .card-input { width: 100%; padding: 14px 16px; font-size: 18px; font-family: inherit; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); outline: none; text-align: center; letter-spacing: -0.01em; margin-bottom: 12px; -webkit-appearance: none; }
+    .card-input:focus { border-color: var(--text2); }
+
+    /* Buttons */
+    .action-row { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-bottom: 4px; }
+    .btn { border: 0.5px solid var(--border2); background: var(--bg); border-radius: var(--radius); padding: 14px 18px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 500; color: var(--text); -webkit-tap-highlight-color: transparent; transition: opacity 0.12s; }
+    .btn:active { opacity: 0.65; }
+    .btn.primary { background: var(--text); color: var(--bg); border-color: transparent; font-weight: 600; }
+    .btn.muted { color: var(--text2); font-weight: 400; }
+    .btn.full { grid-column: 1 / -1; }
+
+    /* Badge */
+    .badge { font-size: 11px; padding: 2px 9px; border-radius: 99px; font-weight: 600; white-space: nowrap; }
+    .bg { background: var(--green-bg); color: var(--green-text); }
+    .bm { background: var(--amber-bg); color: var(--amber-text); }
+    .bb { background: var(--red-bg); color: var(--red-text); }
+    .bn { background: var(--bg2); color: var(--text2); }
+
+    /* Done screen */
+    .done-panel { text-align: center; padding: 2rem 0; }
+    .done-big { font-size: 36px; font-weight: 700; letter-spacing: -0.04em; margin-bottom: 6px; }
+    .done-sub { font-size: 14px; color: var(--text2); }
+    .cats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 20px; }
+    .cat-card { border-radius: var(--radius); padding: 12px 10px; text-align: left; }
+    .cat-card.g { background: var(--green-bg); }
+    .cat-card.m { background: var(--amber-bg); }
+    .cat-card.b { background: var(--red-bg); }
+    .cat-num { font-size: 24px; font-weight: 700; margin-bottom: 2px; }
+    .cat-card.g .cat-num { color: var(--green); }
+    .cat-card.m .cat-num { color: var(--amber); }
+    .cat-card.b .cat-num { color: var(--red); }
+    .cat-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+    .cat-card.g .cat-title { color: var(--green-text); }
+    .cat-card.m .cat-title { color: var(--amber-text); }
+    .cat-card.b .cat-title { color: var(--red-text); }
+    .cat-item { font-size: 12px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cat-card.g .cat-item { color: var(--green-dark); }
+    .cat-card.m .cat-item { color: var(--amber-dark); }
+    .cat-card.b .cat-item { color: var(--red-dark); }
+
+    /* Editor */
+    .section-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+    .field-label { font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .form-field { display: flex; flex-direction: column; }
+    input[type=text], select { width: 100%; padding: 12px 12px; font-family: inherit; font-size: 15px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); outline: none; -webkit-appearance: none; appearance: none; }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+    input[type=text]:focus, select:focus { border-color: var(--text2); }
+    .btn-row { display: flex; gap: 8px; }
+    .sbtn { border: 0.5px solid var(--border2); background: var(--bg); border-radius: var(--radius); padding: 12px 16px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 500; color: var(--text); -webkit-tap-highlight-color: transparent; }
+    .sbtn:active { opacity: 0.65; }
+    .sbtn.p { background: var(--text); color: var(--bg); border-color: transparent; }
+    .sbtn.d { color: var(--red-dark); border-color: rgba(226,75,74,0.2); }
+    .divider { height: 0.5px; background: var(--border); margin: 16px 0; }
+    .card-list { display: flex; flex-direction: column; gap: 8px; }
+    .ci { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; align-items: center; gap: 10px; background: var(--bg); }
+    .ci-text { flex: 1; min-width: 0; }
+    .ci-de { font-size: 14px; font-weight: 600; }
+    .ci-en { font-size: 12px; color: var(--text2); margin-top: 1px; }
+    .ci-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    .empty-state { text-align: center; padding: 3rem 1rem; }
+    .empty-state h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; color: var(--text2); line-height: 1.5; }
+
+    .hidden { display: none !important; }
+    .level-pill { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; margin-right: 5px; letter-spacing: 0.04em; }
+    .pill-a1 { background: #E6F1FB; color: #185FA5; }
+    .pill-a2 { background: #EEEDFE; color: #3C3489; }
+    .cat-section { margin-bottom: 20px; }
+    .cat-section-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+    .cat-section-title .add-all-btn { font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--green-text); background: var(--green-bg); border: none; border-radius: 99px; padding: 3px 10px; cursor: pointer; font-family: inherit; }
+    .lib-item { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; display: flex; align-items: center; gap: 8px; background: var(--bg); margin-bottom: 6px; }
+    .lib-item-text { flex: 1; min-width: 0; }
+    .lib-item-de { font-size: 14px; font-weight: 600; }
+    .lib-item-en { font-size: 12px; color: var(--text2); margin-top: 1px; }
+    .lib-add-btn { font-size: 12px; font-weight: 600; border: none; border-radius: 99px; padding: 4px 12px; cursor: pointer; font-family: inherit; white-space: nowrap; flex-shrink: 0; }
+    .lib-add-btn.can-add { background: var(--green-bg); color: var(--green-text); }
+    .lib-add-btn.added { background: var(--bg2); color: var(--text3); cursor: default; }
+    .lib-filter-row { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filter-pill { border: 0.5px solid var(--border2); background: var(--bg); border-radius: 99px; padding: 5px 12px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text2); font-family: inherit; }
+    .filter-pill.on { background: var(--text); color: var(--bg); border-color: transparent; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="nav">
+    <span class="app-name">Deutsch lernen</span>
+    <button class="tab on" id="tab-study" onclick="showTab('study')">Study</button>
+    <button class="tab" id="tab-library" onclick="showTab('library')">Library</button>
+    <button class="tab" id="tab-cards" onclick="showTab('cards')">My cards</button>
+  </div>
+
+  <!-- STUDY -->
+  <div class="view" id="view-study">
+    <div class="stats-row">
+      <div class="sc"><div class="sc-label">Total</div><div class="sc-val" id="s-total">0</div></div>
+      <div class="sc"><div class="sc-label">Good</div><div class="sc-val" id="s-good" style="color:var(--green)">0</div></div>
+      <div class="sc"><div class="sc-label">Medium</div><div class="sc-val" id="s-med" style="color:var(--amber)">0</div></div>
+      <div class="sc"><div class="sc-label">Bad</div><div class="sc-val" id="s-bad" style="color:var(--red)">0</div></div>
+    </div>
+    <div id="study-main"></div>
+  </div>
+
+  <!-- LIBRARY -->
+  <div class="view hidden" id="view-library">
+    <div id="library-main"></div>
+  </div>
+
+  <!-- CARDS -->
+  <div class="view hidden" id="view-cards">
+    <div class="section-title" id="form-title">Add a card</div>
+    <div class="form-row">
+      <div class="form-field"><div class="field-label">German</div><input type="text" id="f-de" placeholder="e.g. die Katze"></div>
+      <div class="form-field"><div class="field-label">English</div><input type="text" id="f-en" placeholder="e.g. the cat"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><div class="field-label">Type</div><select id="f-type"><option value="word">Word / phrase</option><option value="sentence">Sentence</option></select></div>
+      <div class="form-field"><div class="field-label">Hint (optional)</div><input type="text" id="f-hint" placeholder="e.g. feminine noun"></div>
+    </div>
+    <div class="btn-row" style="margin-bottom:4px">
+      <button class="sbtn p" id="save-btn" onclick="saveCard()">Add card</button>
+      <button class="sbtn hidden" id="cancel-btn" onclick="cancelEdit()">Cancel</button>
+    </div>
+    <div class="divider"></div>
+    <div class="card-list" id="card-list"></div>
+  </div>
+</div>
+
+<script>
+const CKEY = 'de_cards', MKEY = 'de_meta';
+let cards = [], meta = { sessionRight: 0, sessionTotal: 0, lastDay: null }, editId = null;
+let queue = [], qIdx = 0, phase = 'ask', lastRating = '';
+let wordList = [], libFilter = 'all';
+
+function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
+function retrieve(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e) { return null; } }
+function uid() { return Math.random().toString(36).slice(2, 9); }
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function today() { return new Date().toISOString().slice(0, 10); }
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (_, j) => i === 0 ? j : j === 0 ? i : 0));
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)
+    dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function normalize(s) {
+  return String(s || '').toLowerCase().trim()
+    .replace(/[.,!?;:'"()[\]]/g, '').replace(/\s+/g, ' ')
+    .replace(/ä/g,'a').replace(/ö/g,'o').replace(/ü/g,'u').replace(/ß/g,'ss');
+}
+
+function checkMatch(input, correct) {
+  const a = normalize(input), b = normalize(correct);
+  if (a === b) return 'exact';
+  const dist = levenshtein(a, b);
+  const threshold = b.length <= 4 ? 1 : b.length <= 8 ? 2 : 3;
+  return dist <= threshold ? 'typo' : 'wrong';
+}
+
+function getCategory(card) {
+  const h = card.history || [];
+  if (h.length === 0) return 'new';
+  const last = h.slice(-6);
+  const score = last.reduce((a, x) => a + (x === 'exact' ? 2 : x === 'typo' ? 1 : 0), 0) / (last.length * 2);
+  if (score >= 0.75) return 'good';
+  if (score >= 0.35) return 'medium';
+  return 'bad';
+}
+
+function recordResult(card, result) {
+  if (!card.history) card.history = [];
+  card.history.push(result);
+  if (card.history.length > 20) card.history = card.history.slice(-20);
+}
+
+function isInDeck(w) {
+  return cards.some(c => normalize(c.de) === normalize(w.de));
+}
+
+function addFromLibrary(idx) {
+  const w = wordList[idx];
+  if (!w || isInDeck(w)) return;
+  const type = w.de.includes(' ') ? 'sentence' : 'word';
+  cards.push({ id: uid(), de: w.de, en: w.en, type, hint: w.category, level: w.level, history: [] });
+  store(CKEY, cards);
+  updateStats();
+  buildQueue();
+  renderLibrary();
+  renderCardList();
+}
+
+function addAllInCategory(category) {
+  const toAdd = wordList.filter(w => w.category === category && !isInDeck(w));
+  toAdd.forEach(w => {
+    const type = w.de.includes(' ') ? 'sentence' : 'word';
+    cards.push({ id: uid(), de: w.de, en: w.en, type, hint: w.category, level: w.level, history: [] });
+  });
+  store(CKEY, cards);
+  updateStats();
+  buildQueue();
+  renderLibrary();
+  renderCardList();
+}
+
+async function init() {
+  const sc = retrieve(CKEY), sm = retrieve(MKEY);
+  if (sc) cards = sc;
+  if (sm) meta = sm;
+  if (meta.lastDay !== today()) { meta.sessionRight = 0; meta.sessionTotal = 0; }
+
+  try {
+    const res = await fetch('words.json');
+    wordList = await res.json();
+  } catch(e) { wordList = []; }
+
+  // First run: auto-import all words
+  if (cards.length === 0 && wordList.length > 0) {
+    wordList.forEach(w => {
+      const type = w.de.includes(' ') ? 'sentence' : 'word';
+      cards.push({ id: uid(), de: w.de, en: w.en, type, hint: w.category, level: w.level, history: [] });
+    });
+    store(CKEY, cards);
+  }
+
+  buildQueue(); updateStats(); renderStudy(); renderCardList();
+}
+
+function buildQueue() {
+  const shuffled = [...cards].sort(() => Math.random() - 0.5);
+  const bad  = shuffled.filter(c => getCategory(c) === 'bad');
+  const nw   = shuffled.filter(c => getCategory(c) === 'new');
+  const med  = shuffled.filter(c => getCategory(c) === 'medium');
+  const good = shuffled.filter(c => getCategory(c) === 'good');
+  queue = [...bad, ...nw, ...med, ...good].map(c => ({...c, _dir: Math.random() < 0.5 ? 'de-en' : 'en-de'}));
+  qIdx = 0; phase = 'ask'; lastRating = '';
+}
+
+function updateStats() {
+  const cats = cards.map(getCategory);
+  document.getElementById('s-total').textContent = cards.length;
+  document.getElementById('s-good').textContent  = cats.filter(c => c === 'good').length;
+  document.getElementById('s-med').textContent   = cats.filter(c => c === 'medium').length;
+  document.getElementById('s-bad').textContent   = cats.filter(c => c === 'bad').length;
+}
+
+function renderStudy() {
+  const el = document.getElementById('study-main');
+  if (cards.length === 0) {
+    el.innerHTML = `<div class="empty-state"><h3>No cards yet</h3><p>Browse the Library tab to add words.</p></div>`;
+    return;
+  }
+  if (qIdx >= queue.length) { renderDone(); return; }
+
+  const card = queue[qIdx];
+  const isDE = card._dir === 'de-en';
+  const askLang = isDE ? 'Deutsch' : 'English';
+  const askWord = isDE ? card.de : card.en;
+  const ansLang = isDE ? 'English' : 'Deutsch';
+  const ansWord = isDE ? card.en : card.de;
+  const pct = Math.round(qIdx / queue.length * 100);
+  const cat = getCategory(card);
+  const catBc = cat==='good'?'bg':cat==='medium'?'bm':cat==='bad'?'bb':'bn';
+
+  if (phase === 'ask') {
+    el.innerHTML = `
+      <div class="queue-meta">
+        <span>${qIdx + 1} / ${queue.length}</span>
+        <span class="badge ${catBc}">${cat}</span>
+      </div>
+      <div class="prog-wrap"><div class="prog-bar neutral" style="width:${pct}%"></div></div>
+      <div class="card-shell">
+        <div class="prompt-lang">${askLang}</div>
+        <div class="prompt-word">${esc(askWord)}</div>
+        ${card.hint ? `<div class="prompt-hint">${esc(card.hint)}</div>` : ''}
+        <div style="font-size:12px;color:var(--text3);margin-top:18px">Type the ${ansLang} translation</div>
+      </div>
+      <input class="card-input" type="text" id="answer-input" placeholder="Your answer..." autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+      <div class="action-row">
+        <button class="btn muted" onclick="doSkip()">I don't know</button>
+        <button class="btn primary" onclick="checkAnswer()">Check</button>
+      </div>`;
+    const inp = document.getElementById('answer-input');
+    if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') checkAnswer(); });
+  } else {
+    const result = lastRating;
+    const shellClass = result==='exact'?'correct':result==='typo'?'typo':result==='skip'?'skipped':'wrong';
+    const barClass = result==='exact'?'good':result==='wrong'?'bad':'neutral';
+    let feedbackMsg = '', feedbackClass = '', yourAns = '';
+    if (result === 'exact') { feedbackMsg = 'Correct!'; feedbackClass = 'ok'; }
+    else if (result === 'typo') { feedbackMsg = 'Close — watch the spelling'; feedbackClass = 'warn'; yourAns = `You wrote: "${esc(card._userAns)}"`; }
+    else if (result === 'skip') { feedbackMsg = 'Skipped'; feedbackClass = 'skip'; }
+    else { feedbackMsg = 'Not quite'; feedbackClass = 'err'; yourAns = `You wrote: "${esc(card._userAns)}"`; }
+
+    el.innerHTML = `
+      <div class="queue-meta">
+        <span>${qIdx + 1} / ${queue.length}</span>
+        <span class="badge ${catBc}">${cat}</span>
+      </div>
+      <div class="prog-wrap"><div class="prog-bar ${barClass}" style="width:${pct}%"></div></div>
+      <div class="card-shell ${shellClass}">
+        <div class="prompt-lang">${askLang}</div>
+        <div class="prompt-word">${esc(askWord)}</div>
+        ${card.hint ? `<div class="prompt-hint">${esc(card.hint)}</div>` : ''}
+        <div class="answer-divider"></div>
+        <div class="ans-lang">${ansLang}</div>
+        <div class="ans-word">${esc(ansWord)}</div>
+        <div class="feedback-msg ${feedbackClass}">${feedbackMsg}</div>
+        ${yourAns ? `<div class="your-ans">${yourAns}</div>` : ''}
+      </div>
+      <div class="action-row">
+        <button class="btn primary full" onclick="nextCard()">Next &rarr;</button>
+      </div>`;
+  }
+}
+
+function checkAnswer() {
+  const inp = document.getElementById('answer-input');
+  if (!inp) return;
+  const val = inp.value.trim();
+  if (!val) { inp.focus(); return; }
+  const card = queue[qIdx];
+  const isDE = card._dir === 'de-en';
+  const ansWord = isDE ? card.en : card.de;
+  const result = checkMatch(val, ansWord);
+  card._userAns = val;
+  lastRating = result;
+  phase = 'reveal';
+  const rating = result === 'exact' ? 'exact' : result === 'typo' ? 'typo' : 'wrong';
+  recordResult(card, rating);
+  const idx = cards.findIndex(c => c.id === card.id);
+  if (idx !== -1) cards[idx] = {...cards[idx], history: card.history};
+  meta.sessionTotal++;
+  if (rating === 'exact' || rating === 'typo') meta.sessionRight++;
+  meta.lastDay = today();
+  store(CKEY, cards); store(MKEY, meta);
+  updateStats(); renderStudy();
+}
+
+function doSkip() {
+  const card = queue[qIdx];
+  card._userAns = '';
+  lastRating = 'skip';
+  phase = 'reveal';
+  recordResult(card, 'wrong');
+  const idx = cards.findIndex(c => c.id === card.id);
+  if (idx !== -1) cards[idx] = {...cards[idx], history: card.history};
+  meta.sessionTotal++;
+  meta.lastDay = today();
+  store(CKEY, cards); store(MKEY, meta);
+  updateStats(); renderStudy();
+}
+
+function nextCard() { qIdx++; phase = 'ask'; lastRating = ''; renderStudy(); }
+
+function renderDone() {
+  const good = cards.filter(c => getCategory(c) === 'good');
+  const med  = cards.filter(c => getCategory(c) === 'medium');
+  const bad  = cards.filter(c => getCategory(c) === 'bad');
+  const acc  = meta.sessionTotal > 0 ? Math.round(meta.sessionRight / meta.sessionTotal * 100) + '%' : '—';
+  const slice = (arr, n) => arr.slice(0, n).map(c => `<div class="cat-item">${esc(c.de)}</div>`).join('') + (arr.length > n ? `<div class="cat-item" style="opacity:0.5">+${arr.length - n} more</div>` : '');
+  document.getElementById('study-main').innerHTML = `
+    <div class="done-panel">
+      <div class="done-big">Session done</div>
+      <div class="done-sub">${acc} accuracy &middot; ${meta.sessionTotal} cards reviewed</div>
+      <div class="cats-row">
+        <div class="cat-card g"><div class="cat-num">${good.length}</div><div class="cat-title">Good</div>${slice(good, 4)}</div>
+        <div class="cat-card m"><div class="cat-num">${med.length}</div><div class="cat-title">Medium</div>${slice(med, 4)}</div>
+        <div class="cat-card b"><div class="cat-num">${bad.length}</div><div class="cat-title">Bad</div>${slice(bad, 4)}</div>
+      </div>
+      <button class="btn primary" style="margin-top:20px;width:100%" onclick="restartSession()">Study again</button>
+    </div>`;
+}
+
+function restartSession() { meta.sessionRight = 0; meta.sessionTotal = 0; buildQueue(); renderStudy(); }
+
+function renderLibrary() {
+  const el = document.getElementById('library-main');
+  if (!el) return;
+  if (wordList.length === 0) {
+    el.innerHTML = '<p style="font-size:14px;color:var(--text2)">Word list not loaded.</p>';
+    return;
+  }
+
+  const filtered = libFilter === 'all' ? wordList : wordList.filter(w => w.level === libFilter.toUpperCase() || w.category === libFilter);
+  const categories = [...new Set(filtered.map(w => w.category))];
+  const levels = ['all', 'a1', 'a2'];
+
+  const addedCount = wordList.filter(w => isInDeck(w)).length;
+  const totalCount = wordList.length;
+
+  el.innerHTML = `
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">${addedCount} of ${totalCount} words in your deck</div>
+    <div class="lib-filter-row">
+      ${levels.map(l => `<button class="filter-pill${libFilter===l?' on':''}" onclick="setLibFilter('${l}')">${l==='all'?'All':l.toUpperCase()}</button>`).join('')}
+    </div>
+    ${categories.map(cat => {
+      const words = filtered.filter(w => w.category === cat);
+      const allAdded = words.every(w => isInDeck(w));
+      return `<div class="cat-section">
+        <div class="cat-section-title">
+          <span>${cap(cat)}</span>
+          ${!allAdded ? `<button class="add-all-btn" onclick="addAllInCategory('${cat}')">+ Add all</button>` : '<span style="font-size:12px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">All added</span>'}
+        </div>
+        ${words.map((w, i) => {
+          const globalIdx = wordList.indexOf(w);
+          const added = isInDeck(w);
+          return `<div class="lib-item">
+            <div class="lib-item-text">
+              <div class="lib-item-de"><span class="level-pill pill-${w.level.toLowerCase()}">${w.level}</span>${esc(w.de)}</div>
+              <div class="lib-item-en">${esc(w.en)}</div>
+            </div>
+            <button class="lib-add-btn ${added?'added':'can-add'}" onclick="${added?'':'addFromLibrary('+globalIdx+')'}">${added?'Added':'+ Add'}</button>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('')}`;
+}
+
+function setLibFilter(f) {
+  libFilter = f;
+  renderLibrary();
+}
+
+function renderCardList() {
+  const list = document.getElementById('card-list');
+  if (!list) return;
+  if (cards.length === 0) { list.innerHTML = '<p style="font-size:14px;color:var(--text2)">No cards yet.</p>'; return; }
+  list.innerHTML = cards.map(card => {
+    const cat = getCategory(card);
+    const bc = cat==='good'?'bg':cat==='medium'?'bm':cat==='bad'?'bb':'bn';
+    return `<div class="ci">
+      <div class="ci-text">
+        <div class="ci-de">${esc(card.de)}</div>
+        <div class="ci-en">${esc(card.en)}${card.hint ? ` · <em>${esc(card.hint)}</em>` : ''}</div>
+      </div>
+      <span class="badge ${bc}">${cat}</span>
+      <div class="ci-actions">
+        <button class="sbtn" style="padding:6px 10px;font-size:12px" onclick="editCard('${card.id}')">Edit</button>
+        <button class="sbtn d" style="padding:6px 10px;font-size:12px" onclick="delCard('${card.id}')">Del</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveCard() {
+  const de = document.getElementById('f-de').value.trim();
+  const en = document.getElementById('f-en').value.trim();
+  const type = document.getElementById('f-type').value;
+  const hint = document.getElementById('f-hint').value.trim();
+  if (!de || !en) { alert('Please fill in both German and English.'); return; }
+  if (editId) {
+    const i = cards.findIndex(c => c.id === editId);
+    if (i !== -1) cards[i] = {...cards[i], de, en, type, hint};
+    editId = null;
+  } else {
+    cards.push({id: uid(), de, en, type, hint, history: []});
+  }
+  store(CKEY, cards);
+  clearForm(); buildQueue(); renderCardList(); updateStats();
+}
+
+function editCard(id) {
+  const c = cards.find(x => x.id === id); if (!c) return;
+  editId = id;
+  document.getElementById('f-de').value = c.de;
+  document.getElementById('f-en').value = c.en;
+  document.getElementById('f-type').value = c.type;
+  document.getElementById('f-hint').value = c.hint || '';
+  document.getElementById('form-title').textContent = 'Edit card';
+  document.getElementById('save-btn').textContent = 'Save';
+  document.getElementById('cancel-btn').classList.remove('hidden');
+  document.getElementById('view-cards').scrollTo(0, 0);
+}
+
+function cancelEdit() { editId = null; clearForm(); }
+function clearForm() {
+  ['f-de','f-en','f-hint'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-type').value = 'word';
+  document.getElementById('form-title').textContent = 'Add a card';
+  document.getElementById('save-btn').textContent = 'Add card';
+  document.getElementById('cancel-btn').classList.add('hidden');
+}
+
+async function delCard(id) {
+  if (!confirm('Delete this card?')) return;
+  cards = cards.filter(c => c.id !== id);
+  store(CKEY, cards);
+  buildQueue(); renderCardList(); updateStats(); renderStudy();
+}
+
+function showTab(name) {
+  ['study','library','cards'].forEach(t => {
+    document.getElementById('view-'+t).classList.toggle('hidden', t !== name);
+    document.getElementById('tab-'+t).classList.toggle('on', t === name);
+  });
+  if (name === 'cards') renderCardList();
+  if (name === 'study') renderStudy();
+  if (name === 'library') renderLibrary();
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+init();
+</script>
+</body>
+</html>
